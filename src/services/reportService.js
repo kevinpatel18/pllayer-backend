@@ -337,7 +337,7 @@ async function bookingVenueReportList(
   user
 ) {
   const limit = parseInt(size);
-  const offset = (parseInt(page) - 1) * limit; // Calculate proper offset
+  const offset = parseInt(page); // Calculate proper offset
 
   // Build the where clause upfront
   const whereClause = { isCancelBooking: false };
@@ -366,8 +366,27 @@ async function bookingVenueReportList(
       : { [Op.gte]: from_date };
   }
 
+  // First query to get total revenues
+  const totalRevenues = await db.bookingVenue.findOne({
+    where: whereClause,
+    attributes: [
+      [
+        Sequelize.fn("SUM", Sequelize.col("groundAmount")),
+        "total_ground_revenue",
+      ],
+      [
+        Sequelize.fn("SUM", Sequelize.col("playerAmount")),
+        "total_player_revenue",
+      ],
+    ],
+    raw: true,
+  });
+
+  console.log("totalRevenues: ", totalRevenues);
+
+  console.log("whereClause: ", whereClause);
   // Perform a single optimized query with necessary includes
-  const bookings = await db.bookingVenue.findAll({
+  const bookings = await db.bookingVenue.findAndCountAll({
     where: whereClause,
     order: [["createdAt", "DESC"]],
     include: [
@@ -388,60 +407,26 @@ async function bookingVenueReportList(
         as: "venueSport",
       },
     ],
-
+    limit: limit,
+    offset: offset,
     raw: true, // Get plain objects instead of Sequelize instances
     nest: true, // Nest the included models
   });
 
-  if (!bookings.length) return false;
-
-  // Use Map instead of object for better performance with large datasets
-  const userBookings = new Map();
-  let totalGroundRevenue = 0;
-  let totalPlayerRevenue = 0;
-
-  // Single pass through the data
-  for (const booking of bookings) {
-    const userId = booking.userId || "unknownUser";
-
-    if (!userBookings.has(userId)) {
-      userBookings.set(userId, {
-        userId: booking.userId,
-        username: booking.users?.username || "Unknown",
-        phoneNumber: booking.users?.phoneNumber || null,
-        bookingDetails: [],
-        totalSlots: 0,
-        totalGroundAmount: 0,
-        totalPlayerAmount: 0,
-      });
-    }
-
-    const userBooking = userBookings.get(userId);
-    userBooking.bookingDetails.push(booking);
-    userBooking.totalSlots++;
-    userBooking.totalGroundAmount += booking.groundAmount;
-    userBooking.totalPlayerAmount += booking.playerAmount;
-
-    totalGroundRevenue += booking.groundAmount;
-    totalPlayerRevenue += booking.playerAmount;
-  }
-
-  const resultArray = Array.from(userBookings.values());
-  const totalItems = resultArray.length;
+  console.log("bookings: ", bookings);
+  if (!bookings.rows.length) return false;
 
   return {
-    data: resultArray.slice(offset, offset + limit),
-    total_ground_revenue: totalGroundRevenue,
-    total_player_revenue: totalPlayerRevenue,
+    data: bookings.rows,
+    total_ground_revenue: totalRevenues.total_ground_revenue,
+    total_player_revenue: totalRevenues.total_player_revenue,
     pagination: {
       page: offset,
       page_size: limit,
-      total_items: totalItems,
-      total_pages: Math.ceil(totalItems / limit),
+      total_items: bookings.count,
     },
   };
 }
-
 async function cancelBookingVenueReportList(
   venueOwnerId,
   from_date,
@@ -450,31 +435,11 @@ async function cancelBookingVenueReportList(
   size,
   user
 ) {
-  let limit = parseInt(size);
-  let offset = parseInt(page) - 1;
+  const limit = parseInt(size);
+  const offset = parseInt(page); // Calculate proper offset
 
-  let query = {
-    distinct: true,
-    include: [
-      {
-        model: db.users,
-        as: "users",
-      },
-      {
-        model: db.venue,
-        as: "venue",
-      },
-
-      {
-        model: db.venueCourt,
-        as: "venueCourt",
-      },
-      {
-        model: db.sport,
-        as: "venueSport",
-      },
-    ],
-  };
+  // Build the where clause upfront
+  let whereClause = {};
 
   if (venueOwnerId) {
     let findAllVenueId = await db.venue.findAll({
@@ -486,7 +451,7 @@ async function cancelBookingVenueReportList(
     let venueIdArray = findAllVenueId.map((venue) => venue.venueId);
 
     if (venueIdArray?.length > 0) {
-      query.where = {
+      whereClause = {
         venueId: {
           [Op.in]: venueIdArray, // Use Op.in to match any of the venueId in the array
         },
@@ -496,15 +461,15 @@ async function cancelBookingVenueReportList(
 
   if (from_date) {
     if (to_date) {
-      query.where = {
-        ...query.where,
+      whereClause = {
+        ...whereClause,
         date: {
           [Op.between]: [from_date, to_date], // Replace 'agendaDate' with your actual date field name
         },
       };
     } else {
-      query.where = {
-        ...query.where,
+      whereClause = {
+        ...whereClause,
         date: {
           [Op.gte]: from_date, // Greater than or equal to 'fromDate'
         },
@@ -512,81 +477,68 @@ async function cancelBookingVenueReportList(
     }
   }
 
-  let allBookingVenue = await db.cancelBookingVenue.findAll(query);
+  // First query to get total revenues
+  const totalRevenues = await db.cancelBookingVenue.findOne({
+    where: whereClause,
+    attributes: [
+      [
+        Sequelize.fn("SUM", Sequelize.col("groundAmount")),
+        "total_ground_revenue",
+      ],
+      [
+        Sequelize.fn("SUM", Sequelize.col("playerAmount")),
+        "total_player_revenue",
+      ],
+    ],
+    raw: true,
+  });
 
-  // Create an object to group bookings by userId
-  const groupedByUser = allBookingVenue.reduce((acc, booking) => {
-    const userId = booking.userId;
+  console.log("totalRevenues: ", totalRevenues);
 
-    // If userId is null, treat it as a separate case (unknown user)
-    if (userId === null) {
-      if (!acc["unknownUser"]) {
-        acc["unknownUser"] = {
-          userId: null,
-          bookingDetails: [],
-          totalSlots: 0,
-          totalGroundAmount: 0,
-          totalPlayerAmount: 0,
-        };
-      }
-
-      // Add booking data and update totals
-      acc["unknownUser"].bookingDetails.push(booking);
-      acc["unknownUser"].totalSlots += 1;
-      acc["unknownUser"].totalGroundAmount += booking.groundAmount;
-      acc["unknownUser"].totalPlayerAmount += booking.playerAmount;
-    } else {
-      // If userId is not in the accumulator, initialize it
-      if (!acc[userId]) {
-        acc[userId] = {
-          userId: booking.users?.userId || userId,
-          username: booking.users?.username || "Unknown",
-          phoneNumber: booking.users?.phoneNumber || null,
-          bookingDetails: [],
-          totalSlots: 0,
-          totalGroundAmount: 0,
-          totalPlayerAmount: 0,
-        };
-      }
-
-      // Add current booking to the user's bookings array
-      acc[userId].bookingDetails.push(booking);
-      acc[userId].totalSlots += 1; // Count the booking slot
-      acc[userId].totalGroundAmount += booking.groundAmount; // Sum groundAmount
-      acc[userId].totalPlayerAmount += booking.playerAmount; // Sum playerAmount
-    }
-
-    return acc;
-  }, {});
-
-  const resultArray = Object.values(groupedByUser);
-
-  if (resultArray.length > 0) {
-    const paginatedData = {
-      data: resultArray.slice(offset, offset + limit),
-      total_ground_revenue: resultArray.reduce(
-        (acc, num) => acc + +num?.totalGroundAmount,
-        0
-      ),
-      total_player_revenue: resultArray.reduce(
-        (acc, num) => acc + +num?.totalPlayerAmount,
-        0
-      ),
-      pagination: {
-        page: offset,
-        page_size: limit,
-        total_items: resultArray.length,
-        total_pages: Math.ceil(resultArray.length / limit),
+  console.log("whereClause: ", whereClause);
+  // Perform a single optimized query with necessary includes
+  const bookings = await db.cancelBookingVenue.findAndCountAll({
+    where: whereClause,
+    order: [["createdAt", "DESC"]],
+    include: [
+      {
+        model: db.users,
+        as: "users",
       },
-    };
+      {
+        model: db.venue,
+        as: "venue",
+      },
+      {
+        model: db.venueCourt,
+        as: "venueCourt",
+      },
+      {
+        model: db.sport,
+        as: "venueSport",
+      },
+    ],
+    limit: limit,
+    offset: offset,
+    distinct: true,
+    raw: true, // Get plain objects instead of Sequelize instances
+    nest: true, // Nest the included models
+  });
 
-    return paginatedData;
-  } else {
-    return false;
-  }
+  console.log("bookings: ", bookings);
+  if (!bookings.rows.length) return false;
+
+  return {
+    data: bookings.rows,
+    total_ground_revenue: totalRevenues.total_ground_revenue,
+    total_player_revenue: totalRevenues.total_player_revenue,
+    pagination: {
+      page: offset,
+      page_size: limit,
+      total_items: bookings.count,
+    },
+  };
 }
-
-
 
 async function venueBookingReportList(
   venueOwnerId,
@@ -770,8 +722,6 @@ async function venueBookingReportList(
     };
   }
 }
-
-
 
 async function liveVenueBookingReportList() {
   let allBookingVenue = await db.bookingVenue.findAll({

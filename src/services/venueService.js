@@ -431,7 +431,6 @@ async function insertBookingSlot(data, userdata) {
           "hh:mm A"
         )} - (${venueCourtName}),`;
 
-
       createdBookings.push(newBooking);
       totalSlotBookings++;
 
@@ -449,188 +448,188 @@ async function insertBookingSlot(data, userdata) {
   console.log("slotMessage: %%%%%%%%%%%%%%%%%%%%%%%%%%%% ", slotMessage);
 
   let sportData = await db.sport.findOne({ where: { sportId: venuesportid } });
-  console.log('sportData: ', sportData);
+  console.log("sportData: ", sportData);
 
-  // Call external API to send WhatsApp notification
-  try {
-    const response = await axios.post(
-      "https://graph.facebook.com/v20.0/489571214232105/messages",
-      {
-        messaging_product: "whatsapp",
-        to: `+91${phonenumber}`,
-        type: "template",
-        template: {
-          name: "player_booking_conformation",
-          language: {
-            code: "en",
-          },
-          components: [
-            {
-              type: "header",
-              parameters: [
-                {
-                  type: "text",
-                  text: username,
-                },
-              ],
-            },
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: `+91${phonenumber}`,
-                },
-                {
-                  type: "text",
-                  text: moment().format("DD-MM-YYYY"),
-                },
-                {
-                  type: "text",
-                  text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
-                },
-                {
-                  type: "text",
-                  text: slotMessage.trim(), // Replace with dynamic time if needed
-                },
-                {
-                  type: "text",
-                  text: venueName.trim(),
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
-        },
-      }
-    );
-    console.log("WhatsApp API Response:", response.data);
-  } catch (error) {
-    console.error("Error sending WhatsApp notification:", error.message);
-  }
-  // Call external API for Hitesh to send WhatsApp notification
-  try {
-    const response = await axios.post(
-      "https://graph.facebook.com/v20.0/489571214232105/messages",
-      {
-        messaging_product: "whatsapp",
-        to: `+919558819809`,
-        type: "template",
-        template: {
-          name: "player_booking_conformation",
-          language: {
-            code: "en",
-          },
-          components: [
-            {
-              type: "header",
-              parameters: [
-                {
-                  type: "text",
-                  text: username,
-                },
-              ],
-            },
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: `+91${phonenumber}`,
-                },
-                {
-                  type: "text",
-                  text: moment().format("DD-MM-YYYY"),
-                },
-                {
-                  type: "text",
-                  text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
-                },
-                {
-                  type: "text",
-                  text: slotMessage.trim(), // Replace with dynamic time if needed
-                },
-                {
-                  type: "text",
-                  text: venueName.trim(),
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
-        },
-      }
-    );
-    console.log("WhatsApp API Response:", response.data);
-  } catch (error) {
-    console.error("Error sending WhatsApp notification:", error.message);
-  }
-  // Call external API for Venue Owner  to send WhatsApp notification
-  try {
-    const response = await axios.post(
-      "https://graph.facebook.com/v20.0/489571214232105/messages",
-      {
-        messaging_product: "whatsapp",
-        to: `+91${venueOwnerData?.phoneNumber}`,
-        // to: `+919316019087`,
-        type: "template",
-        template: {
-          name: "venue_owner_2025",
-          language: { code: "en" },
-          components: [
-            {
-              type: "header",
-              parameters: [{ type: "text", text: "Alert" }],
-            },
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
-                },
-                {
-                  type: "text",
-                  text: slotMessage.trim(),
-                },
-                { type: "text", text: moment().format("DD-MM-YYYY") },
-                { type: "text", text: venueName.trim() },
-                { type: "text", text: sportData.name.trim() },
-                {
-                  type: "text",
-                  text: username,
-                },
-                {
-                  type: "text",
-                  text: phonenumber,
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        headers: {
-          Authorization:
-            "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
-        },
-      }
-    );
-    console.log("WhatsApp API Response:", response.data);
-  } catch (error) {
-    
-    console.error("Error sending WhatsApp notification:", error.message);
-  }
+  // // Call external API to send WhatsApp notification
+  // try {
+  //   const response = await axios.post(
+  //     "https://graph.facebook.com/v20.0/489571214232105/messages",
+  //     {
+  //       messaging_product: "whatsapp",
+  //       to: `+91${phonenumber}`,
+  //       type: "template",
+  //       template: {
+  //         name: "player_booking_conformation",
+  //         language: {
+  //           code: "en",
+  //         },
+  //         components: [
+  //           {
+  //             type: "header",
+  //             parameters: [
+  //               {
+  //                 type: "text",
+  //                 text: username,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             type: "body",
+  //             parameters: [
+  //               {
+  //                 type: "text",
+  //                 text: `+91${phonenumber}`,
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: moment().format("DD-MM-YYYY"),
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: slotMessage.trim(), // Replace with dynamic time if needed
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: venueName.trim(),
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       headers: {
+  //         Authorization:
+  //           "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
+  //       },
+  //     }
+  //   );
+  //   console.log("WhatsApp API Response:", response.data);
+  // } catch (error) {
+  //   console.error("Error sending WhatsApp notification:", error.message);
+  // }
+  // // Call external API for Hitesh to send WhatsApp notification
+  // try {
+  //   const response = await axios.post(
+  //     "https://graph.facebook.com/v20.0/489571214232105/messages",
+  //     {
+  //       messaging_product: "whatsapp",
+  //       to: `+919558819809`,
+  //       type: "template",
+  //       template: {
+  //         name: "player_booking_conformation",
+  //         language: {
+  //           code: "en",
+  //         },
+  //         components: [
+  //           {
+  //             type: "header",
+  //             parameters: [
+  //               {
+  //                 type: "text",
+  //                 text: username,
+  //               },
+  //             ],
+  //           },
+  //           {
+  //             type: "body",
+  //             parameters: [
+  //               {
+  //                 type: "text",
+  //                 text: `+91${phonenumber}`,
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: moment().format("DD-MM-YYYY"),
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: slotMessage.trim(), // Replace with dynamic time if needed
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: venueName.trim(),
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       headers: {
+  //         Authorization:
+  //           "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
+  //       },
+  //     }
+  //   );
+  //   console.log("WhatsApp API Response:", response.data);
+  // } catch (error) {
+  //   console.error("Error sending WhatsApp notification:", error.message);
+  // }
+  // // Call external API for Venue Owner  to send WhatsApp notification
+  // try {
+  //   const response = await axios.post(
+  //     "https://graph.facebook.com/v20.0/489571214232105/messages",
+  //     {
+  //       messaging_product: "whatsapp",
+  //       to: `+91${venueOwnerData?.phoneNumber}`,
+  //       // to: `+919316019087`,
+  //       type: "template",
+  //       template: {
+  //         name: "venue_owner_2025",
+  //         language: { code: "en" },
+  //         components: [
+  //           {
+  //             type: "header",
+  //             parameters: [{ type: "text", text: "Alert" }],
+  //           },
+  //           {
+  //             type: "body",
+  //             parameters: [
+  //               {
+  //                 type: "text",
+  //                 text: moment(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: slotMessage.trim(),
+  //               },
+  //               { type: "text", text: moment().format("DD-MM-YYYY") },
+  //               { type: "text", text: venueName.trim() },
+  //               { type: "text", text: sportData.name.trim() },
+  //               {
+  //                 type: "text",
+  //                 text: username,
+  //               },
+  //               {
+  //                 type: "text",
+  //                 text: phonenumber,
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     {
+  //       headers: {
+  //         Authorization:
+  //           "Bearer EAAVTYy8cTpkBO3xHtahZAcssb6RgC2RDefFlJwB7l5p1ZAbGlv3Rmivsc9S0dth0xtxuM4oUJJiBMaMDPLz7nMUNm8ZAPurQto89ZC57TOsj1ECZAtNGrNTOuVXfeMXdVWj5mi6R9eRfpkGqcgVhAI4qWM3ZA4XU81Jp4QKC7z3hwFI1vMIXpzaPKe0ayJxvXHgwZDZD",
+  //       },
+  //     }
+  //   );
+  //   console.log("WhatsApp API Response:", response.data);
+  // } catch (error) {
+
+  //   console.error("Error sending WhatsApp notification:", error.message);
+  // }
 
   let newTransactionData = {
     venueId: venueid,

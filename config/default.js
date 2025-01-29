@@ -25,6 +25,13 @@ module.exports = {
     password: "AVNS_DlgSZHw1brcNjLdb6XV",
     database: "defaultdb",
   },
+  // db: {
+  //   host: "localhost",
+  //   port: "3306",
+  //   user: "root",
+  //   password: "Kevin1810",
+  //   database: "player-app",
+  // },
 
   // db: {
   //   host: "34.93.30.178",
