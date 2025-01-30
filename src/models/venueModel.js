@@ -79,6 +79,10 @@ function model(sequelize) {
       type: DataTypes.BOOLEAN,
       required: true,
     },
+    allUsers: {
+      type: DataTypes.TEXT("long"),
+      required: true,
+    },
   };
 
   const Venue = sequelize.define("venue", attributes, {

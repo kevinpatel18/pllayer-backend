@@ -2,13 +2,16 @@ const reportService = require("../services/reportService");
 
 const userReportList = (req, res) => {
   reportService
-    .userReport(req.query.page, req.query.page_size, req.user)
+    .userReport(
+      req.query.page,
+      req.query.page_size,
+      req.query.name,
+      req.query.phoneNumber
+    )
     .then((list) =>
       res.status(200).send({
         status: true,
         data: list.data,
-        total_ground_amount_revenue: list.total_ground_amount_revenue,
-        total_player_amount_revenue: list.total_player_amount_revenue,
         pagination: list.pagination,
       })
     )
@@ -34,6 +37,29 @@ const userReportListByVenueOwner = (req, res) => {
         data: list.data,
         total_ground_amount_revenue: list.total_ground_amount_revenue,
         total_player_amount_revenue: list.total_player_amount_revenue,
+        pagination: list.pagination,
+      })
+    )
+    .catch((err) =>
+      res.status(400).send({
+        status: false,
+        message: err.message,
+      })
+    );
+};
+const manageUser = (req, res) => {
+  reportService
+    .manageUserReport(
+      req.params.id,
+      req.query.page,
+      req.query.page_size,
+      req.query.name,
+      req.query.phoneNumber
+    )
+    .then((list) =>
+      res.status(200).send({
+        status: true,
+        data: list.data,
         pagination: list.pagination,
       })
     )
@@ -135,4 +161,5 @@ module.exports = {
   bookingVenueReportList,
   cancelBookingVenueReportList,
   venueBookingReportList,
+  manageUser,
 };

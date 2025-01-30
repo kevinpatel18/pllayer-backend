@@ -7,8 +7,12 @@ router.get(
   "/userReportByVenueOwner/:id",
   reportController.userReportListByVenueOwner
 );
+router.get("/manageUser/:id", reportController.manageUser);
 router.get("/bookingVenueReport", reportController.bookingVenueReportList);
-router.get("/cancelBookingReport", reportController.cancelBookingVenueReportList);
+router.get(
+  "/cancelBookingReport",
+  reportController.cancelBookingVenueReportList
+);
 router.get("/venueBookingReport", reportController.venueBookingReportList);
 
 module.exports = router;

@@ -18,20 +18,20 @@ module.exports = {
     region: "region US East (Ohio) us-east-2",
   },
 
-  db: {
-    host: "mysql-1642f7c7-kevinsoftwaredeveloper-f833.d.aivencloud.com",
-    port: "20504",
-    user: "avnadmin",
-    password: "AVNS_DlgSZHw1brcNjLdb6XV",
-    database: "defaultdb",
-  },
   // db: {
-  //   host: "localhost",
-  //   port: "3306",
-  //   user: "root",
-  //   password: "Kevin1810",
-  //   database: "player-app",
+  //   host: "mysql-1642f7c7-kevinsoftwaredeveloper-f833.d.aivencloud.com",
+  //   port: "20504",
+  //   user: "avnadmin",
+  //   password: "AVNS_DlgSZHw1brcNjLdb6XV",
+  //   database: "defaultdb",
   // },
+  db: {
+    host: "localhost",
+    port: "3306",
+    user: "root",
+    password: "Kevin1810",
+    database: "player-app",
+  },
 
   // db: {
   //   host: "34.93.30.178",

@@ -1,23 +1,48 @@
 const db = require("../db/sequelizeClient");
 const { Op, Sequelize } = require("sequelize");
 
-async function userReport(page, size, user) {
+async function userReport(page, size, name, phoneNumber) {
   const limit = parseInt(size);
-  const offset = (parseInt(page) - 1) * limit; // Calculate correct offset
+  const offset = parseInt(page); // Calculate correct offset
+
+  let query = { role: "user" };
+
+  if (name) {
+    query.username = { [Op.like]: `%${name}%` };
+  }
+
+  if (phoneNumber) {
+    query.phoneNumber = phoneNumber;
+  }
+  console.log("query: ", query);
 
   // Use a single JOIN query to get all required data at once
   const userBookings = await db.users.findAndCountAll({
-    where: { role: "user" },
+    where: query,
     include: [
       {
         model: db.bookingVenue,
         where: { isCancelBooking: false },
         required: false, // LEFT JOIN to include users with no bookings
         as: "bookingVenues",
+        include: [
+          {
+            model: db.venue,
+            as: "venue",
+          },
+          {
+            model: db.venueCourt,
+            as: "venueCourt",
+          },
+          {
+            model: db.sport,
+            as: "venueSport",
+          },
+        ],
       },
     ],
-    limit,
-    offset,
+    limit: limit,
+    offset: offset,
     distinct: true, // Important for correct count with associations
   });
 
@@ -46,28 +71,16 @@ async function userReport(page, size, user) {
       total_active_bookings: bookings.length,
       total_ground_amount_revenue,
       total_player_amount_revenue,
-      booking_details: bookings,
+      bookingDetails: bookings,
     };
   });
 
-  // Calculate grand totals in a single pass
-  const [totalGroundRevenue, totalPlayerRevenue] = processedData.reduce(
-    (acc, user) => [
-      acc[0] + user.total_ground_amount_revenue,
-      acc[1] + user.total_player_amount_revenue,
-    ],
-    [0, 0]
-  );
-
   return {
     data: processedData,
-    total_ground_amount_revenue: totalGroundRevenue,
-    total_player_amount_revenue: totalPlayerRevenue,
     pagination: {
       page: parseInt(page),
       page_size: limit,
       total_items: userBookings.count,
-      total_pages: Math.ceil(userBookings.count / limit),
     },
   };
 }
@@ -103,6 +116,7 @@ async function userReportListByVenueOwner(id, page, size, user) {
     raw: true,
   });
 
+  console.log("bookingStats: ", bookingStats);
   if (!bookingStats.length) return false;
 
   // Get all relevant users in a single query
@@ -427,6 +441,7 @@ async function bookingVenueReportList(
     },
   };
 }
+
 async function cancelBookingVenueReportList(
   venueOwnerId,
   from_date,
@@ -504,25 +519,27 @@ async function cancelBookingVenueReportList(
       {
         model: db.users,
         as: "users",
+        required: false,
       },
       {
         model: db.venue,
         as: "venue",
+        required: false,
       },
       {
         model: db.venueCourt,
         as: "venueCourt",
+        required: false,
       },
       {
         model: db.sport,
         as: "venueSport",
+        required: false,
       },
     ],
     limit: limit,
     offset: offset,
     distinct: true,
-    raw: true, // Get plain objects instead of Sequelize instances
-    nest: true, // Nest the included models
   });
 
   console.log("bookings: ", bookings);
@@ -749,6 +766,103 @@ async function liveVenueBookingReportList() {
   return allBookingVenue;
 }
 
+async function manageUserReport(id, page, size, name, phoneNumber) {
+  const limit = parseInt(size);
+  const offset = parseInt(page);
+
+  // First get all venue IDs for the owner
+  const venues = await db.venue.findAll({
+    where: { userId: id },
+    attributes: ["allUsers", "venueId"],
+    raw: true,
+  });
+
+  if (!venues.length) return false;
+  // console.log("venues: ", venues?.[0]?.allUsers);
+  const venueIds = venues.map((venue) => venue.venueId);
+
+  const userIds = JSON.parse(venues?.[0]?.allUsers || "[]");
+
+  let query = {
+    userId: {
+      [Op.in]: userIds,
+    },
+  };
+
+  if (name) {
+    query.username = { [Op.like]: `%${name}%` };
+  }
+
+  if (phoneNumber) {
+    query.phoneNumber = phoneNumber;
+  }
+
+  const users = await db.users.findAndCountAll({
+    where: query,
+    limit: limit,
+    offset: offset,
+    include: [
+      {
+        model: db.bookingVenue,
+        as: "bookingVenues",
+        required: false, // LEFT JOIN to include users with no bookings
+        where: {
+          venueId: { [Op.in]: venueIds },
+          isCancelBooking: false,
+        },
+        include: [
+          {
+            model: db.venue,
+            as: "venue",
+          },
+          {
+            model: db.venueCourt,
+            as: "venueCourt",
+          },
+          {
+            model: db.sport,
+            as: "venueSport",
+          },
+        ],
+      },
+    ],
+  });
+
+  const processedData = users.rows.map((user) => {
+    const bookings = user.bookingVenues || [];
+
+    // Calculate totals using reduce once per user
+    const total_ground_amount_revenue = bookings.reduce(
+      (acc, booking) => acc + (Number(booking.groundAmount) || 0),
+      0
+    );
+
+    const total_player_amount_revenue = bookings.reduce(
+      (acc, booking) => acc + (Number(booking.playerAmount) || 0),
+      0
+    );
+
+    return {
+      userid: user.userId,
+      username: user.username,
+      phonenumber: user.phoneNumber,
+      isblocked: user.isblocked,
+      total_active_bookings: bookings.length,
+      total_ground_amount_revenue,
+      total_player_amount_revenue,
+      bookingDetails: bookings,
+    };
+  });
+  return {
+    data: processedData,
+    pagination: {
+      page: parseInt(page),
+      page_size: limit,
+      total_items: users.count,
+    },
+  };
+}
+
 module.exports = {
   userReport,
   userReportListByVenueOwner,
@@ -756,4 +870,5 @@ module.exports = {
   cancelBookingVenueReportList,
   venueBookingReportList,
   liveVenueBookingReportList,
+  manageUserReport,
 };
