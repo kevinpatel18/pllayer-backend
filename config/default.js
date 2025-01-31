@@ -1,6 +1,6 @@
 module.exports = {
   api: {
-    port: 8080,
+    port: 80,
     root: "/api",
   },
 
@@ -26,10 +26,10 @@ module.exports = {
   //   database: "defaultdb",
   // },
   db: {
-    host: "localhost",
+    host: "database-1.clscuccc2hdy.ap-south-1.rds.amazonaws.com",
     port: "3306",
-    user: "root",
-    password: "Kevin1810",
+    user: "admin",
+    password: "Kevin0987",
     database: "player-app",
   },
 
