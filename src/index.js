@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const config = require("config");
-const https = require("https");
+const http = require("http");
 const { webSocketService } = require("./utils/websocket");
 const moment = require("moment");
 require("./db/sequelizeClient");
@@ -35,7 +35,7 @@ console.log(
   moment("07:30", "hh:mm").format("hh:mm A")
 );
 
-const server = https.createServer(app);
+const server = http.createServer(app);
 
 webSocketService.init(server);
 
