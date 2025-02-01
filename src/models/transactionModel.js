@@ -47,6 +47,18 @@ function model(sequelize) {
       type: DataTypes.INTEGER,
       required: true,
     },
+    upiId: {
+      type: DataTypes.STRING,
+      required: true,
+    },
+    isCancelBooking: {
+      type: DataTypes.BOOLEAN,
+      required: true,
+    },
+    status: {
+      type: DataTypes.BOOLEAN,
+      required: true,
+    },
   };
 
   const Transaction = sequelize.define("transaction", attributes, {

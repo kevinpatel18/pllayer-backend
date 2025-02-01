@@ -287,6 +287,7 @@ async function insertBookingSlot(data, userdata) {
     playerAmount,
     groundAmount,
     date,
+    upiId,
   } = data;
 
   let user = await db.users.findOne({ where: { phoneNumber: phonenumber } });
@@ -324,6 +325,27 @@ async function insertBookingSlot(data, userdata) {
   let slotMessage = "";
 
   let venueData = await db.venue.findOne({ where: { venueId: venueid } });
+
+  if (venueData) {
+    let allOldUsers = JSON.parse(venueData?.allUsers || "[]");
+
+    let check = allOldUsers?.findIndex((er) => +er === +user?.userId);
+    console.log("check: ", check);
+
+    if (check === -1) {
+      allOldUsers?.push(user?.userId);
+
+      await db.venue.update(
+        { allUsers: JSON.stringify(allOldUsers) },
+        {
+          where: {
+            venueId: venueid,
+          },
+        }
+      );
+    }
+  }
+
   let venueName = venueData?.name;
   let venueOwnerData = await db.users.findOne({
     where: { userId: venueData?.userId },
@@ -640,6 +662,12 @@ async function insertBookingSlot(data, userdata) {
     totalSlot: totalSlotBookings,
     bookingDate: date,
   };
+
+  if (upiId) {
+    newTransactionData.upiId = upiId;
+    newTransactionData.isCancelBooking = false;
+    newTransactionData.status = false;
+  }
 
   let Transaction = await db.transaction.create(newTransactionData);
 
@@ -1315,6 +1343,153 @@ async function userBookingDetails(phoneNumber) {
   }
 }
 
+async function transactionSettlementList(
+  page,
+  size,
+  venueOwnerId,
+  from_date,
+  to_date,
+  user
+) {
+  const limit = parseInt(size);
+  const offset = parseInt(page); // Calculate correct offset
+
+  const sqlQuery = {
+    where: {
+      upiId: {
+        [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }],
+      },
+      isCancelBooking: false,
+    },
+    order: [["createdAt", "ASC"]],
+    limit: limit,
+    offset: offset,
+    distinct: true, // Ensuring only distinct rows are counted
+    include: [
+      { model: db.venue, as: "venue" },
+      { model: db.sport, as: "sport" },
+      { model: db.users, as: "users" },
+    ],
+  };
+
+  if (venueOwnerId) {
+    const venueIds = await db.venue.findAll({
+      where: { userId: venueOwnerId },
+      attributes: ["venueId"],
+      raw: true,
+      // Add index hint if you have an index on userId
+      // indexHints: [{ type: 'USE', values: ['idx_userId'] }]
+    });
+
+    if (venueIds.length) {
+      sqlQuery.where.venueId = {
+        [Op.in]: venueIds.map((venue) => venue.venueId),
+      };
+    }
+  }
+
+  if (from_date) {
+    sqlQuery.where.bookingDate = to_date
+      ? { [Op.between]: [from_date, to_date] }
+      : { [Op.gte]: from_date };
+  }
+
+  console.log("sqlQuery: ", sqlQuery);
+  const list = await db.transaction.findAndCountAll(sqlQuery);
+  delete sqlQuery.limit;
+  delete sqlQuery.offset;
+  const allrecord = await db.transaction.findAll(sqlQuery);
+
+  const total_player_amount_revenue = allrecord.reduce(
+    (acc, booking) => acc + (Number(booking.totalPriceplayerAmount) || 0),
+    0
+  );
+
+  //   return the Data
+  return {
+    data: list.rows,
+    total_player_amount_revenue,
+    pagination: {
+      page: parseInt(page),
+      page_size: limit,
+      total_items: list.count,
+    },
+  };
+}
+async function transactionRefundsList(
+  page,
+  size,
+  venueOwnerId,
+  from_date,
+  to_date,
+  user
+) {
+  const limit = parseInt(size);
+  const offset = parseInt(page); // Calculate correct offset
+
+  const sqlQuery = {
+    where: {
+      upiId: {
+        [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }],
+      },
+      isCancelBooking: true,
+    },
+    order: [["createdAt", "ASC"]],
+    limit: limit,
+    offset: offset,
+    distinct: true, // Ensuring only distinct rows are counted
+    include: [
+      { model: db.venue, as: "venue" },
+      { model: db.sport, as: "sport" },
+      { model: db.users, as: "users" },
+    ],
+  };
+
+  if (venueOwnerId) {
+    const venueIds = await db.venue.findAll({
+      where: { userId: venueOwnerId },
+      attributes: ["venueId"],
+      raw: true,
+      // Add index hint if you have an index on userId
+      // indexHints: [{ type: 'USE', values: ['idx_userId'] }]
+    });
+
+    if (venueIds.length) {
+      sqlQuery.where.venueId = {
+        [Op.in]: venueIds.map((venue) => venue.venueId),
+      };
+    }
+  }
+
+  if (from_date) {
+    sqlQuery.where.bookingDate = to_date
+      ? { [Op.between]: [from_date, to_date] }
+      : { [Op.gte]: from_date };
+  }
+
+  console.log("sqlQuery: ", sqlQuery);
+  const list = await db.transaction.findAndCountAll(sqlQuery);
+  delete sqlQuery.limit;
+  delete sqlQuery.offset;
+  const allrecord = await db.transaction.findAll(sqlQuery);
+
+  const total_player_amount_revenue = allrecord.reduce(
+    (acc, booking) => acc + (Number(booking.totalPriceplayerAmount) || 0),
+    0
+  );
+
+  //   return the Data
+  return {
+    data: list.rows,
+    total_player_amount_revenue,
+    pagination: {
+      page: parseInt(page),
+      page_size: limit,
+      total_items: list.count,
+    },
+  };
+}
+
 module.exports = {
   list,
   allAvailableSlot,
@@ -1325,5 +1500,7 @@ module.exports = {
   updateCancelBookingStatus,
   updateVenueDetails,
   userBookingDetails,
+  transactionSettlementList,
   updateBookingStatus,
+  transactionRefundsList,
 };

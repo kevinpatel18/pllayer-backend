@@ -179,6 +179,56 @@ const userBookingDetails = (req, res) => {
       });
     });
 };
+const transactionSettlementList = (req, res) => {
+  console.log("req.query: ", req.query);
+  venueService
+    .transactionSettlementList(
+      req.query.page,
+      req.query.page_size,
+      req.query.venueOwnerId,
+      req.query.from_date,
+      req.query.to_date,
+      req.user
+    )
+    .then((list) =>
+      res.status(200).send({
+        status: true,
+        data: list,
+      })
+    )
+    .catch((err) => {
+      console.log("err: ", err);
+      return res.status(400).send({
+        status: false,
+        message: err.message,
+      });
+    });
+};
+const transactionRefundsList = (req, res) => {
+  console.log("req.query: ", req.query);
+  venueService
+    .transactionRefundsList(
+      req.query.page,
+      req.query.page_size,
+      req.query.venueOwnerId,
+      req.query.from_date,
+      req.query.to_date,
+      req.user
+    )
+    .then((list) =>
+      res.status(200).send({
+        status: true,
+        data: list,
+      })
+    )
+    .catch((err) => {
+      console.log("err: ", err);
+      return res.status(400).send({
+        status: false,
+        message: err.message,
+      });
+    });
+};
 
 module.exports = {
   venueList,
@@ -191,4 +241,6 @@ module.exports = {
   updateVenueDetails,
   userBookingDetails,
   updateBookingStatus,
+  transactionSettlementList,
+  transactionRefundsList,
 };
